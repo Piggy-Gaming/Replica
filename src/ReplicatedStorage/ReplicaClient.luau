@@ -372,6 +372,16 @@ function Replica:IsActive(): boolean
 	return self.Maid:IsActive()
 end
 
+-- Internal function to fire set listeners for a path
+function Replica:FireSetListeners(path: {string}, value: any, old_value: any)
+	if next(self.set_listeners) ~= nil then
+		local listeners = self.set_listeners[table.concat(path, ".")]
+		if listeners ~= nil then
+			listeners:Fire(value, old_value)
+		end
+	end
+end
+
 function Replica:Set(path: {string}, value: any)
 	
 	if ReplicationFlag ~= true then
@@ -390,12 +400,7 @@ function Replica:Set(path: {string}, value: any)
 	
 	-- Firing signals:
 	
-	if next(self.set_listeners) ~= nil then
-		local listeners = self.set_listeners[table.concat(path, ".")]
-		if listeners ~= nil then
-			listeners:Fire(value, old_value)
-		end
-	end
+	self:FireSetListeners(path, value, old_value)
 	self.changed_listeners:Fire("Set", path, value, old_value)
 	
 end
@@ -413,7 +418,13 @@ function Replica:SetValues(path: {string}, values: {[string]: any})
 		pointer = pointer[key]
 	end
 	for key, value in pairs(values) do
+		local old_value = pointer[key]
 		pointer[key] = value
+
+		-- Fire set listeners
+		local new_path = table.clone(path)
+		table.insert(new_path, key)
+		self:FireSetListeners(new_path, value, old_value)
 	end
 	
 	-- Firing signals:
