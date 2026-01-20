@@ -219,6 +219,8 @@ export type Replica = {
 	Maid: typeof(Maid),
 
 	Set: (self: any, path: {string}, value: any) -> (),
+	Update: <T>(self: any, path: {string}, fun: (T) -> (T)) -> (),
+	Increment: (self: any, path: {string}, value: number) -> (),
 	SetValues: (self: any, path: {string}, values: {[string]: any}) -> (),
 	TableInsert: (self: any, path: {string}, value: any, index: number?) -> (number),
 	TableRemove: (self: any, path: {string}, index: number) -> (any),
@@ -363,6 +365,20 @@ function Replica:Set(path: {string}, value: any)
 		end
 	end
 	
+end
+
+function Replica:Update<T>(path: {string}, fun: (T) -> (T))
+	-- Get value
+	local pointer = self.Data
+	for i = 1, #path - 1 do
+		pointer = pointer[path[i]]	
+	end
+	
+	self:Set(path, fun(pointer[path[#path]]))
+end
+
+function Replica:Increment(path: {string}, value: number)
+	self:Update(path, function(v) return v + value end)
 end
 
 function Replica:SetValues(path: {string}, values: {[string]: any})
